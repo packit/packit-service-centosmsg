@@ -36,7 +36,6 @@ logger = getLogger(__name__)
 logger.setLevel("INFO")
 
 
-print(sys.path)
 class Consumerino(mqtt.Client):
     """
     Consume events from centos messaging
@@ -62,11 +61,14 @@ class Consumerino(mqtt.Client):
     def on_message(self, client, userdata, msg):
         pprint(msg.topic)
         pprint(json.loads(msg.payload))
-        # self.celery_app.send_task(
-            # name="task.steve_jobs.process_message", kwargs={"event": msg}
-        # )
-        logger.info(json.loads(msg.payload))
 
+        if os.getenv("SEND_CELERY_TASKS"):
+            msg.payload["topic"] = msg.topic
+            self.celery_app.send_task(
+                name="task.steve_jobs.process_message", kwargs={"event": msg.payload}
+            )
+
+        logger.info(json.loads(msg.payload))
 
     def on_connect(self, client, userdata, flags, rc):
         print("Connected with result code " + str(rc))
@@ -81,10 +83,12 @@ class Consumerino(mqtt.Client):
         if not (path.isfile(ca_certs) and path.isfile(certfile)):
             raise FileNotFoundError
 
-        self.tls_set(ca_certs=ca_certs, certfile=certfile,
-                     keyfile=certfile, cert_reqs=ssl.CERT_REQUIRED,
-                     tls_version=ssl.PROTOCOL_TLS)
+        self.tls_set(
+            ca_certs=ca_certs,
+            certfile=certfile,
+            keyfile=certfile,
+            cert_reqs=ssl.CERT_REQUIRED,
+            tls_version=ssl.PROTOCOL_TLS,
+        )
         self.connect(host="mqtt.stg.centos.org", port=8883)
         self.loop_forever()
-
-

@@ -24,7 +24,6 @@
 Listen to messages coming to centos messaging
 """
 import os
-from time import sleep
 
 import click
 

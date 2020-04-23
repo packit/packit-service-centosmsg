@@ -23,17 +23,15 @@
 import json
 import os
 import ssl
-import sys
-from logging import getLogger
-from os import getenv, path
-from pprint import pprint
-from time import sleep
+import logging
 
 import paho.mqtt.client as mqtt
 from celery import Celery
 
-logger = getLogger(__name__)
-logger.setLevel("INFO")
+logger = logging.getLogger(__name__)
+console_handler = logging.StreamHandler()
+logger.addHandler(console_handler)
+logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
 
 class Consumerino(mqtt.Client):
@@ -44,13 +42,15 @@ class Consumerino(mqtt.Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._celery_app = None
+        self.subtopics = None
+        self.disable_sending_celery_tasks = False
 
     @property
     def celery_app(self):
         if self._celery_app is None:
-            redis_host = getenv("REDIS_SERVICE_HOST", "localhost")
-            redis_port = getenv("REDIS_SERVICE_PORT", "6379")
-            redis_db = getenv("REDIS_SERVICE_DB", "0")
+            redis_host = os.getenv("REDIS_SERVICE_HOST", "localhost")
+            redis_port = os.getenv("REDIS_SERVICE_PORT", "6379")
+            redis_db = os.getenv("REDIS_SERVICE_DB", "0")
             redis_url = "redis://{host}:{port}/{db}".format(
                 host=redis_host, port=redis_port, db=redis_db
             )
@@ -59,29 +59,49 @@ class Consumerino(mqtt.Client):
         return self._celery_app
 
     def on_message(self, client, userdata, msg):
-        pprint(msg.topic)
-        pprint(json.loads(msg.payload))
-
-        if os.getenv("SEND_CELERY_TASKS"):
-            msg.payload["topic"] = msg.topic
-            self.celery_app.send_task(
-                name="task.steve_jobs.process_message", kwargs={"event": msg.payload}
+        logger.info(f"Received a message on topic: {msg.topic}")
+        subtopic = msg.topic.split("/", 1)[-1].split(".", 1)[0]
+        if self.subtopics and subtopic not in self.subtopics:
+            logger.debug(
+                f"Ignore message: Subtopic {subtopic!r} not in {self.subtopics!r}."
             )
+            return
 
-        logger.info(json.loads(msg.payload))
+        message = json.loads(msg.payload)
+        message["topic"] = msg.topic
+        logger.debug(json.dumps(message, indent=4))
+
+        if self.disable_sending_celery_tasks:
+            logger.info("Skip sending Celery task.")
+            return
+
+        result = self.celery_app.send_task(
+            name="task.steve_jobs.process_message",
+            kwargs={"event": message, "source": "centosmsg"},
+        )
+        logger.info(f"Task UUID={result.id} sent to Celery.")
 
     def on_connect(self, client, userdata, flags, rc):
-        print("Connected with result code " + str(rc))
-        logger.info(f"Connected wit result code: ${str(rc)}")
-
+        logger.info(f"Connected wit result code: {rc}")
+        self.disable_sending_celery_tasks = os.getenv(
+            "DISABLE_SENDING_CELERY_TASKS", False
+        )
+        # TODO(csomh): try to make it a comma separated list of topics
+        topic = os.getenv("MQTT_TOPICS", "git.stg.centos.org/#")
+        # TODO(csomh): do we need a more flexible way to define sub-topics?
+        self.subtopics = [x for x in os.getenv("MQTT_SUBTOPICS", "").split(",") if x]
+        logger.info(f"Subscribing to topics: {topic!r}")
+        logger.info(f"Filtering for the following subtopics: {self.subtopics!r}")
         # Subscribing in on_connect() means that if we lose the connection and
         # reconnect then subscriptions will be renewed.
-        client.subscribe("git.stg.centos.org/#")
+        client.subscribe(topic)
 
     def consume_from_centos_messaging(self, ca_certs: str, certfile: str):
+        if not os.path.isfile(ca_certs):
+            raise FileNotFoundError(f'"{ca_certs}" is not a file.')
 
-        if not (path.isfile(ca_certs) and path.isfile(certfile)):
-            raise FileNotFoundError
+        if not os.path.isfile(certfile):
+            raise FileNotFoundError(f'"{certfile}" is not a file.')
 
         self.tls_set(
             ca_certs=ca_certs,
@@ -90,5 +110,8 @@ class Consumerino(mqtt.Client):
             cert_reqs=ssl.CERT_REQUIRED,
             tls_version=ssl.PROTOCOL_TLS,
         )
-        self.connect(host="mqtt.stg.centos.org", port=8883)
+        host = os.getenv("MQTT_HOST", "mqtt.stg.centos.org")
+        port = int(os.getenv("MQTT_PORT", 8883))
+        self.connect(host=host, port=port)
+        logger.info(f"Connected to {host}:{port}")
         self.loop_forever()

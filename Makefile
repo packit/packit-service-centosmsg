@@ -1,10 +1,10 @@
-IMAGE ?= usercont/packit-service-centosmsg
-CONTAINER_ENGINE ?= docker
+IMAGE ?= docker.io/usercont/packit-service-centosmsg:dev
+CONTAINER_ENGINE ?= $(shell command -v podman 2> /dev/null || echo docker)
 ANSIBLE_PYTHON ?= /usr/bin/python3
 AP ?= ansible-playbook -vv -c local -i localhost, -e ansible_python_interpreter=$(ANSIBLE_PYTHON)
 
 build: files/install-deps.yaml files/recipe.yaml
-	$(CONTAINER_ENGINE) build --rm -t $(IMAGE):stg .
+	$(CONTAINER_ENGINE) build --rm -t $(IMAGE) .
 
 # run 'make build' first
 # copy (symlink) fedora.toml from our packit-service@gitlab repo into this dir

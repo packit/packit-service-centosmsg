@@ -7,10 +7,9 @@ build: files/install-deps.yaml files/recipe.yaml
 	$(CONTAINER_ENGINE) build --rm -t $(IMAGE) .
 
 # run 'make build' first
-# copy (symlink) fedora.toml from our packit-service@gitlab repo into this dir
 run:
 	$(CONTAINER_ENGINE) run --rm \
-        -v /home/sakalosj/projects/secrets/secrets/stg:/secrets \
-        -e CENTOS_CA_CERTS="/secrets/centos-server-ca.cert" \
-        -e CENTOS_CERTFILE="/secrets/centos.cert" \
-		$(IMAGE):stg
+		-v $(CURDIR)/packit_service_centosmsg:/usr/local/lib/python3.8/site-packages/packit_service_centosmsg:ro,Z \
+		-v $(CURDIR)/secrets:/secrets:ro,Z \
+		-e LOG_LEVEL=DEBUG \
+		$(IMAGE)

@@ -2,7 +2,7 @@ version: "3"
 
 services:
   redis:
-    image: registry.fedoraproject.org/f28/redis
+    image: registry.fedoraproject.org/f31/redis
     container_name: redis
     ports:
       - 6379:6379
@@ -21,18 +21,18 @@ services:
       - redis
     user: "123123"
 
-  fedmsg:
-    container_name: fedmsg
+  centosmsg:
+    container_name: centosmsg
     build:
       context: .
       dockerfile: Dockerfile
-    image: usercont/packit-service-fedmsg:dev
-    command: listen-to-fedora-messaging
+    image: docker.io/usercont/packit-service-centosmsg:dev
+    command: listen-to-centos-messaging
     environment:
-      FEDORA_MESSAGING_CONF: /home/packit/.config/fedora.toml
-      REDIS_SERVICE_HOST: redis
+      LOG_LEVEL: DEBUG
+      # MQTT_SUBTOPICS: pull-request
     volumes:
-      - ./packit_service_fedmsg:/usr/local/lib/python3.7/site-packages/packit_service_fedmsg:ro,z
-      # get it from secrets
-      - ./fedora.toml:/home/packit/.config/fedora.toml:ro,z
+      - ./packit_service_centosmsg:/usr/local/lib/python3.8/site-packages/packit_service_centosmsg:ro,Z
+      - ./secrets/centos-server-ca.cert:/secrets/centos-server-ca.cert:ro,Z
+      - ./secrets/centos.cert:/secrets/centos.cert:ro,Z
     user: "123123"

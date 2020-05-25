@@ -12,9 +12,5 @@
           - git # setuptools-scm
           - python3-setuptools_scm
           - python3-paho-mqtt
+          - python3-cryptography
         state: present
-    - name: pip
-      pip:
-        #fedora 31 has lower version and fedora 32 has some missing dependencies (gcc)
-        name: cryptography >= 2.8
-        executable: pip3

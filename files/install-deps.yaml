@@ -1,8 +1,8 @@
 ---
-- name: Install dependencies for centos messaging consumer.
+- name: Install dependencies for centos messaging consumer
   hosts: all
   tasks:
-    - name: Install all RPM/python packages needed to run centos messaging consumer.
+    - name: Install all RPM/python packages needed to run centos messaging consumer
       dnf:
         name:
           - python3-celery

@@ -24,6 +24,7 @@
 Listen to messages coming to centos messaging
 """
 import os
+from pathlib import Path
 
 import click
 
@@ -37,10 +38,10 @@ def listen_to_centos_messaging():
     """
 
     # hardcoded defaults, because env defined in docker file is not visible (maybe to openshift)
-    CA_CERTS = os.getenv("CENTOS_CA_CERTS", "/secrets/centos-server-ca.cert")
-    CERTFILE = os.getenv("CENTOS_CERTFILE", "/secrets/centos.cert")
+    ca_certs = Path(os.getenv("CENTOS_CA_CERTS", "/secrets/centos-server-ca.cert"))
+    certfile = Path(os.getenv("CENTOS_CERTFILE", "/secrets/centos.cert"))
 
     centos_mqtt_client = Consumerino()
     centos_mqtt_client.consume_from_centos_messaging(
-        ca_certs=CA_CERTS, certfile=CERTFILE
+        ca_certs=ca_certs, certfile=certfile
     )

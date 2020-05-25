@@ -24,6 +24,7 @@ import json
 import os
 import ssl
 import logging
+from pathlib import Path
 
 import paho.mqtt.client as mqtt
 from celery import Celery
@@ -82,7 +83,7 @@ class Consumerino(mqtt.Client):
         logger.info(f"Task UUID={result.id} sent to Celery.")
 
     def on_connect(self, client, userdata, flags, rc):
-        logger.info(f"Connected wit result code: {rc}")
+        logger.info(f"Connected with result code: {rc}")
         self.disable_sending_celery_tasks = os.getenv(
             "DISABLE_SENDING_CELERY_TASKS", False
         )
@@ -96,15 +97,15 @@ class Consumerino(mqtt.Client):
         # reconnect then subscriptions will be renewed.
         client.subscribe(topic)
 
-    def consume_from_centos_messaging(self, ca_certs: str, certfile: str):
-        if not os.path.isfile(ca_certs):
+    def consume_from_centos_messaging(self, ca_certs: Path, certfile: Path):
+        if not ca_certs.is_file():
             raise FileNotFoundError(f'"{ca_certs}" is not a file.')
 
-        if not os.path.isfile(certfile):
+        if not certfile.is_file():
             raise FileNotFoundError(f'"{certfile}" is not a file.')
 
         self.tls_set(
-            ca_certs=ca_certs,
+            ca_certs=str(ca_certs),
             certfile=certfile,
             keyfile=certfile,
             cert_reqs=ssl.CERT_REQUIRED,

@@ -63,7 +63,7 @@ class Consumerino(mqtt.Client):
         logger.info(f"Received a message on topic: {msg.topic}")
         subtopic = msg.topic.split("/", 1)[-1].split(".", 1)[0]
         if self.subtopics and subtopic not in self.subtopics:
-            logger.debug(
+            logger.info(
                 f"Ignore message: Subtopic {subtopic!r} not in {self.subtopics!r}."
             )
             return

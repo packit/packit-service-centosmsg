@@ -19,6 +19,10 @@ Set this to a non-empty value in order to skip creating Celery tasks in the
 worker queue. This is intended to be used to debug the consumer without the
 danger to create noise in the worker queue.
 
+### `MQTT_HOST`
+
+MQTT broker hostname. Defaults to `mqtt.stg.centos.org`.
+
 ### `MQTT_TOPICS`
 
 Topic the consumer should listen to. Can use MQTT topic wildcards. Defaults to

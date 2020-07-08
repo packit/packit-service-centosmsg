@@ -49,12 +49,11 @@ class Consumerino(mqtt.Client):
     @property
     def celery_app(self):
         if self._celery_app is None:
-            redis_host = os.getenv("REDIS_SERVICE_HOST", "redis")
-            redis_port = os.getenv("REDIS_SERVICE_PORT", "6379")
-            redis_db = os.getenv("REDIS_SERVICE_DB", "0")
-            redis_url = "redis://{host}:{port}/{db}".format(
-                host=redis_host, port=redis_port, db=redis_db
-            )
+            password = os.getenv("REDIS_PASSWORD", "")
+            host = os.getenv("REDIS_SERVICE_HOST", "redis")
+            port = os.getenv("REDIS_SERVICE_PORT", "6379")
+            db = os.getenv("REDIS_SERVICE_DB", "0")
+            redis_url = f"redis://:{password}@{host}:{port}/{db}"
 
             self._celery_app = Celery(backend=redis_url, broker=redis_url)
         return self._celery_app

@@ -12,4 +12,5 @@ run:
 		-v $(CURDIR)/packit_service_centosmsg:/usr/local/lib/python3.8/site-packages/packit_service_centosmsg:ro,Z \
 		-v $(CURDIR)/secrets:/secrets:ro,Z \
 		-e LOG_LEVEL=DEBUG \
+		-e REDIS_SERVICE_HOST=redis \
 		$(IMAGE)

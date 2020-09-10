@@ -21,9 +21,9 @@
 # SOFTWARE.
 
 import json
-import os
-import ssl
 import logging
+import ssl
+from os import getenv
 from pathlib import Path
 
 import paho.mqtt.client as mqtt
@@ -32,7 +32,7 @@ from celery import Celery
 logger = logging.getLogger(__name__)
 console_handler = logging.StreamHandler()
 logger.addHandler(console_handler)
-logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
+logger.setLevel(getenv("LOG_LEVEL", "INFO"))
 
 
 class Consumerino(mqtt.Client):
@@ -49,13 +49,24 @@ class Consumerino(mqtt.Client):
     @property
     def celery_app(self):
         if self._celery_app is None:
-            password = os.getenv("REDIS_PASSWORD", "")
-            host = os.getenv("REDIS_SERVICE_HOST", "redis")
-            port = os.getenv("REDIS_SERVICE_PORT", "6379")
-            db = os.getenv("REDIS_SERVICE_DB", "0")
-            redis_url = f"redis://:{password}@{host}:{port}/{db}"
+            bt_options = {}
+            if getenv("AWS_ACCESS_KEY_ID") and getenv("AWS_SECRET_ACCESS_KEY"):
+                broker_url = "sqs://"
+                if not getenv("QUEUE_NAME_PREFIX"):
+                    raise ValueError("QUEUE_NAME_PREFIX not set")
+                bt_options["queue_name_prefix"] = getenv("QUEUE_NAME_PREFIX")
+            elif getenv("REDIS_SERVICE_HOST"):
+                host = getenv("REDIS_SERVICE_HOST")
+                password = getenv("REDIS_PASSWORD", "")
+                port = getenv("REDIS_SERVICE_PORT", "6379")
+                db = getenv("REDIS_SERVICE_DB", "0")
+                broker_url = f"redis://:{password}@{host}:{port}/{db}"
+            else:
+                raise ValueError("Celery broker not configured")
 
-            self._celery_app = Celery(backend=redis_url, broker=redis_url)
+            self._celery_app = Celery(broker=broker_url)
+            self._celery_app.conf.broker_transport_options = bt_options
+            logger.debug(f"Celery uses {broker_url} with {bt_options}")
         return self._celery_app
 
     def on_message(self, client, userdata, msg):
@@ -83,13 +94,13 @@ class Consumerino(mqtt.Client):
 
     def on_connect(self, client, userdata, flags, rc):
         logger.info(f"Connected with result code: {rc}")
-        self.disable_sending_celery_tasks = os.getenv(
+        self.disable_sending_celery_tasks = getenv(
             "DISABLE_SENDING_CELERY_TASKS", False
         )
         # TODO(csomh): try to make it a comma separated list of topics
-        topic = os.getenv("MQTT_TOPICS", "git.stg.centos.org/#")
+        topic = getenv("MQTT_TOPICS", "git.stg.centos.org/#")
         # TODO(csomh): do we need a more flexible way to define sub-topics?
-        self.subtopics = [x for x in os.getenv("MQTT_SUBTOPICS", "").split(",") if x]
+        self.subtopics = [x for x in getenv("MQTT_SUBTOPICS", "").split(",") if x]
         logger.info(f"Subscribing to topics: {topic!r}")
         logger.info(f"Filtering for the following subtopics: {self.subtopics!r}")
         # Subscribing in on_connect() means that if we lose the connection and
@@ -110,8 +121,8 @@ class Consumerino(mqtt.Client):
             cert_reqs=ssl.CERT_REQUIRED,
             tls_version=ssl.PROTOCOL_TLS,
         )
-        host = os.getenv("MQTT_HOST", "mqtt.stg.centos.org")
-        port = int(os.getenv("MQTT_PORT", 8883))
+        host = getenv("MQTT_HOST", "mqtt.stg.centos.org")
+        port = int(getenv("MQTT_PORT", 8883))
         self.connect(host=host, port=port)
         logger.info(f"Connected to {host}:{port}")
         self.loop_forever()

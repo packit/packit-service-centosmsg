@@ -71,10 +71,12 @@ class Consumerino(mqtt.Client):
 
     def on_message(self, client, userdata, msg):
         logger.info(f"Received a message on topic: {msg.topic}")
-        subtopic = msg.topic.split("/", 1)[-1].split(".", 1)[0]
-        if self.subtopics and subtopic not in self.subtopics:
+        received_subtopic = msg.topic.split("/", 1)[-1]
+        if self.subtopics and not any(
+            received_subtopic.startswith(subtopic) for subtopic in self.subtopics
+        ):
             logger.info(
-                f"Ignore message: Subtopic {subtopic!r} not in {self.subtopics!r}."
+                f"Ignore message: Subtopic {received_subtopic!r} not in {self.subtopics!r}."
             )
             return
 
@@ -87,7 +89,7 @@ class Consumerino(mqtt.Client):
             return
 
         result = self.celery_app.send_task(
-            name="task.steve_jobs.process_message",
+            name=getenv("CELERY_TASK_NAME", "task.steve_jobs.process_message"),
             kwargs={"event": message, "source": "centosmsg"},
         )
         logger.info(f"Task UUID={result.id} sent to Celery.")

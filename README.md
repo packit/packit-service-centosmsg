@@ -67,3 +67,38 @@ git.centos.org/commit/flag/added
 
 In this case the consumer could be configured to only listen to
 `git.centos.org/pull-request/#`.
+
+### Celery configuration
+
+### `CELERY_TASK_NAME`
+
+Name of the task containing a message from centos messaging sent to Celery.
+Defaults to `task.steve_jobs.process_message` (tasks in Packit Service).
+
+#### Broker configuration
+
+The following environment variables define the broker used in Celery.
+
+When using AWS SQS as a broker, these env vars need to be set:
+
+### `AWS_ACCESS_KEY_ID`
+
+### `AWS_SECRET_ACCESS_KEY`
+
+### `QUEUE_NAME_PREFIX`
+
+When using redis as a broker, these env vars need to be set:
+
+### `REDIS_SERVICE_HOST`
+
+### `REDIS_PASSWORD`
+
+Defaults to `""`.
+
+### `REDIS_SERVICE_PORT`
+
+Defaults to `6379`.
+
+### `REDIS_SERVICE_DB`
+
+Defaults to `0`.

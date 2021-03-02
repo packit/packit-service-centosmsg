@@ -1,13 +1,9 @@
-FROM fedora:32
+FROM quay.io/packit/base
 
-ENV LANG=en_US.UTF-8 \
-    ANSIBLE_STDOUT_CALLBACK=debug \
-    USER=packit \
+ENV USER=packit \
     HOME=/home/packit \
     CA_CERTS=/secrets/centos-server-ca.cert \
     CERTFILE=/secrets/centos.cert
-
-RUN dnf install -y ansible python3-pip
 
 COPY files/install-deps.yaml /src/files/
 RUN cd /src/ \

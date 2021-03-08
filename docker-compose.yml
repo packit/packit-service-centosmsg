@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: docker.io/usercont/packit-service-centosmsg:dev
+    image: quay.io/packit/packit-service-centosmsg:dev
     command: listen-to-centos-messaging
     environment:
       LOG_LEVEL: DEBUG

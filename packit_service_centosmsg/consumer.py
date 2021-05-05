@@ -67,6 +67,10 @@ class Consumerino(mqtt.Client):
             self._celery_app = Celery(broker=broker_url)
             self._celery_app.conf.broker_transport_options = bt_options
             logger.debug(f"Celery uses {broker_url} with {bt_options}")
+            if getenv("CELERY_DEFAULT_QUEUE"):
+                self._celery_app.conf.task_default_queue = getenv(
+                    "CELERY_DEFAULT_QUEUE"
+                )
         return self._celery_app
 
     def on_message(self, client, userdata, msg):

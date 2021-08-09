@@ -36,6 +36,24 @@ jobs:
           echo "::set-output name=tag::$tag"
         id: branch_tag
 
+      - name: Tag current image before building a new one
+        shell: bash
+        run: |
+          endpoint=https://quay.io/api/v1/repository/packit/packit/tag/
+          header="Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}"
+          tag=${{ steps.build-image.outputs.tags }}
+          # rstript the " latest"
+          [[ $tag == stg* ]] && tag="stg"
+
+          # get id of latest image with such tag
+          latest_image=$(curl -H "${header}" "${endpoint}?onlyActiveTags=true&specificTag=${tag}")
+          echo $latest_image | jq  # debug
+          # prepare data: {"image": "the-image-id"}
+          data=$(echo "${latest_image}" | jq '.tags[0] | {image: .docker_image_id}')
+          # tag the image with {prod|stg}-1
+          # https://docs.quay.io/api/swagger/#!/tag/changeTag (don't expect the data documented there)
+          curl -X PUT -H "${header}" -H "Content-Type:application/json" -d "$data" "${endpoint}${tag}-1"
+
       - name: Build Image
         id: build-image
         # https://github.com/marketplace/actions/buildah-build

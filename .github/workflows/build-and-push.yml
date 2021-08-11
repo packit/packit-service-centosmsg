@@ -41,7 +41,7 @@ jobs:
         run: |
           endpoint=https://quay.io/api/v1/repository/packit/packit/tag/
           header="Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}"
-          tag="${{ steps.branch_tag.outputs.tags }}"
+          tag="${{ steps.branch_tag.outputs.tag }}"
           echo "$tag"
           # rstript the " latest"
           [[ $tag == stg* ]] && tag="stg"

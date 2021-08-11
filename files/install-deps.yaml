@@ -8,8 +8,6 @@
           - python3-celery
           - python3-redis
           - redis # redis-cli
-          - python3-boto3 # AWS SDK
-          - python3-pycurl # ^
           - python3-click
           - git # setuptools-scm
           - python3-setuptools_scm

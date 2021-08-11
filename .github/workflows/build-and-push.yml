@@ -19,42 +19,43 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Extract branch name and set tag
+      - name: Extract branch name and set tags
         shell: bash
         run: |
           branch=${GITHUB_REF#refs/heads/}
-          tag=""
+          tags=""
           case $branch in
               main)
-                  tag="stg latest"
+                  tags="stg latest"
                   ;;
               stable)
-                  tag="prod"
+                  tags="prod"
                   ;;
           esac
           echo "::set-output name=branch::$branch"
-          echo "::set-output name=tag::$tag"
-        id: branch_tag
+          echo "::set-output name=tags::$tags"
+        id: branch_tags
 
       - name: Tag current image before building a new one
         shell: bash
         run: |
-          endpoint=https://quay.io/api/v1/repository/packit/packit/tag/
+          # If the Quay repo name != Github repo name then replace ${{ github.repository }}
+          endpoint=https://quay.io/api/v1/repository/${{ github.repository }}/tag/
           header="Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}"
-          tag="${{ steps.branch_tag.outputs.tag }}"
-          echo "$tag"
+          tag="${{ steps.branch_tags.outputs.tags }}"
           # rstript the " latest"
           [[ $tag == stg* ]] && tag="stg"
 
           # get id of latest image with such tag
-          latest_image=$(curl -H "${header}" "${endpoint}?onlyActiveTags=true&specificTag=${tag}")
+          url="${endpoint}?onlyActiveTags=true&specificTag=${tag}"
+          echo "Querying ${url}"
+          latest_image=$(curl -H "${header}" "${url}")
           echo $latest_image | jq  # debug
           # prepare data: {"image": "the-image-id"}
           data=$(echo "${latest_image}" | jq '.tags[0] | {image: .docker_image_id}')
-          echo "$data"
           # tag the image with {prod|stg}-1
           # https://docs.quay.io/api/swagger/#!/tag/changeTag (don't expect the data documented there)
-          echo "${endpoint}${tag}-1"
+          echo "Putting ${data} to ${endpoint}${tag}-1"
           curl -X PUT -H "${header}" -H "Content-Type:application/json" -d "$data" "${endpoint}${tag}-1"
 
       - name: Build Image
@@ -64,7 +65,7 @@ jobs:
         with:
           dockerfiles: ${{ matrix.dockerfile }}
           image: ${{ matrix.image }}
-          tags: ${{ steps.branch_tag.outputs.tag }}
+          tags: ${{ steps.branch_tags.outputs.tags }}
           oci: true
 
       - name: Push To Quay

@@ -41,7 +41,8 @@ jobs:
         run: |
           endpoint=https://quay.io/api/v1/repository/packit/packit/tag/
           header="Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}"
-          tag=${{ steps.build-image.outputs.tags }}
+          tag="${{ steps.build-image.outputs.tags }}"
+          echo "$tag"
           # rstript the " latest"
           [[ $tag == stg* ]] && tag="stg"
 
@@ -50,8 +51,10 @@ jobs:
           echo $latest_image | jq  # debug
           # prepare data: {"image": "the-image-id"}
           data=$(echo "${latest_image}" | jq '.tags[0] | {image: .docker_image_id}')
+          echo "$data"
           # tag the image with {prod|stg}-1
           # https://docs.quay.io/api/swagger/#!/tag/changeTag (don't expect the data documented there)
+          echo "${endpoint}${tag}-1"
           curl -X PUT -H "${header}" -H "Content-Type:application/json" -d "$data" "${endpoint}${tag}-1"
 
       - name: Build Image

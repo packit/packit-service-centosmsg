@@ -19,44 +19,23 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Extract branch name and set tags
+      - name: Extract branch name and set tag
         shell: bash
         run: |
           branch=${GITHUB_REF#refs/heads/}
-          tags=""
+          tag=""
           case $branch in
               main)
-                  tags="stg latest"
+                  tag="stg latest"
                   ;;
               stable)
-                  tags="prod"
+                  tag="prod"
                   ;;
           esac
-          echo "::set-output name=branch::$branch"
-          echo "::set-output name=tags::$tags"
-        id: branch_tags
-
-      - name: Tag current image before building a new one
-        shell: bash
-        run: |
-          # If the Quay repo name != Github repo name then replace ${{ github.repository }}
-          endpoint=https://quay.io/api/v1/repository/${{ github.repository }}/tag/
-          header="Authorization: Bearer ${{ secrets.QUAY_OAUTH_TOKEN }}"
-          tag="${{ steps.branch_tags.outputs.tags }}"
-          # rstript the " latest"
-          [[ $tag == stg* ]] && tag="stg"
-
-          # get id of latest image with such tag
-          url="${endpoint}?onlyActiveTags=true&specificTag=${tag}"
-          echo "Querying ${url}"
-          latest_image=$(curl -H "${header}" "${url}")
-          echo $latest_image | jq  # debug
-          # prepare data: {"image": "the-image-id"}
-          data=$(echo "${latest_image}" | jq '.tags[0] | {image: .docker_image_id}')
-          # tag the image with {prod|stg}-1
-          # https://docs.quay.io/api/swagger/#!/tag/changeTag (don't expect the data documented there)
-          echo "Putting ${data} to ${endpoint}${tag}-1"
-          curl -X PUT -H "${header}" -H "Content-Type:application/json" -d "$data" "${endpoint}${tag}-1"
+          echo "::set-output name=branch::${branch}"
+          unique_tag="$(date --rfc-3339=date)-${branch}-${GITHUB_SHA::7}"
+          echo "::set-output name=tag::${tag} ${unique_tag}"
+        id: branch_tag
 
       - name: Build Image
         id: build-image
@@ -65,7 +44,7 @@ jobs:
         with:
           dockerfiles: ${{ matrix.dockerfile }}
           image: ${{ matrix.image }}
-          tags: ${{ steps.branch_tags.outputs.tags }}
+          tags: ${{ steps.branch_tag.outputs.tag }}
           oci: true
 
       - name: Push To Quay

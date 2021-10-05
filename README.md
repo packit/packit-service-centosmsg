@@ -79,14 +79,6 @@ Defaults to `task.steve_jobs.process_message` (tasks in Packit Service).
 
 The following environment variables define the broker used in Celery.
 
-When using AWS SQS as a broker, these env vars need to be set:
-
-### `AWS_ACCESS_KEY_ID`
-
-### `AWS_SECRET_ACCESS_KEY`
-
-### `QUEUE_NAME_PREFIX`
-
 When using redis as a broker, these env vars need to be set:
 
 ### `REDIS_SERVICE_HOST`

@@ -38,5 +38,5 @@ repos:
     hooks:
       - id: check-rebase
         args:
-          - git://github.com/packit/packit-service-centosmsg.git
+          - https://github.com/packit/packit-service-centosmsg.git
         stages: [manual, push]
